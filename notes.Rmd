@@ -1,0 +1,204 @@
+---
+title: "Stochastic Notes"
+author: "SQ"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r, include = FALSE}
+library(tidyverse)
+library(dplyr)
+library(knitr)
+source("utilities.R")
+
+```
+
+## Exponential Distribution
+Nt: Nt is your counting process, the number of people coming into a store, by time t, the number of goals scored by time t, etc.
+IMPORTANT NOTES: the number of events in disjoint times are independent, meaning the number of ppl comin in from 1 to 2 and 4 to 5 are completely independent events, but are otherwise NOTE
+Also, increments are stationary, meaning the distribution of ppl coming in depends entirely on the length, not location, of the time frame, meaning the dist for 1 to 2 is the same as from 4 to 5.
+
+This distribution is characterized by Pois(λ t), or in R, for less than, it'd be ppois(target, t*lamd) for the cdf, so for < a value, and dpois(target, t*lamd) for the probability that it's = to a value.
+This also means the E and Var for any N timeframe is lamba*t
+
+
+```{r, include = FALSE}
+# EX: num of cust between 5 and 3 with rate 30/hr being greater than 65
+# P(N5-N3 > 65) == 1 - P(N2 <= 65)
+1 - ppois(65, 2*30) # 0.2355
+
+# EX2: whatsapps with rate 10/hr, prob of 18 by 2 and 70 by 7
+# P(N2 = 18, N7 = 70) == P(N2=18) * P(N7-N2=52) == P(N2=18) * P(N5=52)
+dpois(18, 2*10) * dpois(52, 5*10)
+
+
+```
+
+Tt: Interarrival time, whats the distribution of the distance in time between arrivals? To clarify, T2 is the time between the first arrival and the second, not from none to second arrival.
+- The distribution is characterized by Exp(λ), events are independent and the Expectation of Tn is 1/λ
+
+Sn: Sn is the sum of interrarival times, so the waiting time, until the nth event (T1 +T2 +...Tn)
+- This distribution is characterized by Gamma(n,λ), in R we use pgamma(target time,eventnum, λ) for the cdf, so <
+
+btw, for sums of exponentials, E is n/λ and Var is n/λ^2
+
+```{r, include = FALSE}
+# EX: mean time between goals is 15min, in 60 min game, what is prob goal 4 is in last 5 min?
+# λ = 1/15, 1/15th goal per minute, since λt where t=15 is 1, so λ has to be 1/15
+# what we want is P(55 < S4 < 60) the prob that the waiting time for the 4th goal is between 55 and 60min
+pgamma(60, 4, 1/15) - pgamma(55, 4, 1/15)
+
+# EX2: same setup, if at least 3 goals are scored in game, what is the mean time of the 3rd goal?
+# we want E[S3 | S3 < 60], but you can't do it in R, apparently
+# youd have to do 1/P(S3 < 60) * the expectation of S3, so the integral to dt from 0 to 60 of:
+# t*(λ^n * t^n-1 * e^-λ(t))/(n-1)!
+# needlessly long func for integrating
+# Define parameters
+lambda <- 1 / 15      # Rate
+shape <- 3            # Shape parameter for Gamma, your n value
+
+# Compute P(S3 < 60)
+P_S3_lt_60 <- pgamma(60, shape = shape, rate = lambda)
+P_N60_ge_3 <- 1 - ppois(2, lambda = 60 * lambda)
+# Compute the numerator (integral of t * f_S3(t))
+numerator <- integrate(
+  function(t) t * (lambda^shape * t^(shape-1) * exp(-lambda * t) / factorial(shape-1)),
+  lower = 0, upper = 60
+)$value
+
+# Conditional expectation
+E_S3_given_S3_lt_60 <- numerator / P_S3_lt_60
+
+# Conditional expectation
+E_S3_given_N60_ge_3 <- numerator / P_N60_ge_3
+
+# Print results
+cat("E[S3 | S3 < 60]:", E_S3_given_S3_lt_60, "\n")
+cat("E[S3 | N60 >= 3]:", E_S3_given_N60_ge_3, "\n")
+
+```
+
+
+
+```{r, include = FALSE}
+# EX3: Conditional Situations, assume there's 2 births per hour in poiss process and births are male or female indep w prob male
+# p = 0.519 and female = 1-0.519, in an 8hr shift, what is the mean and st dev of the number of female births?
+# the rates here are for Nt, Mt and Ft, corresponding to all, males, or female counts, their corresponding rates
+# are λ = 2, lamdM = λ * p, and lamdF = λ * (1-p)
+#so then, since number of female births follows pois λ * (1-p) * t, and the expectation is this same value...
+2*(1-0.519)*8 # == E[lamdF*t] == lamdF*t
+sqrt(2*(1-0.519)*8) # == sqrt of the Var, which is the same
+
+# EX4: Same setup, now we want the prob that only girls were born between 2 and 5 pm
+# so what we want is P(M3 = 0, F3 > 0), the events are independent so P(M3 = 0) * P(F3 > 0), and then
+dpois(0, 2*(0.519)*3) * (1-ppois(0, 2*(1-0.519)*3)) # specific prob of male being 0 and of F being more than 0
+
+```
+
+Superposition of poisson process:
+A superposition event is the sum of independent poisson processes like the sum of different animal sightings
+or the total number of goals made by a team being made up of individual player's goal rates.
+
+```{r, include = FALSE}
+# EX: sightings of lions, tigers and bears follow indep poisson processes, with rates λL, λT and λB respectively
+# find the prob dorothy doesnt see any animals in the first 24 hours, given Ntlions, Nttigers and Ntbears are the
+# independent events and Nt is the superposition, we are asked for P(N24 = 0)
+# Since it's the sum of all poisson proc rates, it's the pmf func for poisson, or dpois(0, 24λ)
+
+# EX2: Same setup, given dorothy saw 3 animals in a day, what's the prob each species was seen?
+# youre being asked for P(N24lions =1, N24tigers=1, N24bears=1 | N24=3), we can use bayes theorem to go for
+# P(N24lions =1, N24tigers=1, N24bears=1, N24=3) / P(N24=3), since N24=3 is true if the prior ones are true,
+# we can remove it outright, and since the events are indep, we can solve for:
+# (P(N24lions =1) * P(N24tigers=1) * P(N24bears=1)) / P(N24=3), in R being
+(dpois(1, λL*24) * dpois(1, λT*24) * dpois(1, λB*24)) / dpois(3, (λL+λT+λB)*24) #altho these vars arent declared
+
+
+```
+
+Conditional Distribution of arrival times (Tt):
+P{T1 < s | Nt = 1} = s/t
+for the sum of events, Sn when told exactly n events have happened by time t, the joint conditional density,
+the f(s1,..sn | n) = n!/t^n
+
+```{r}
+#EX: starting t=0, cutomers arrive at pois rate 20/hr, find the prob that the 60th customer arrives in interval
+#[2.9,3]. n=60, λ=20, so what you want is P(2.9 < S60 < 3)
+# P(S60 < 3) - P(2.9 < S60)
+pgamma(3, 60, 20) - pgamma(2.9, 60, 20)
+
+#EX2: Same setup, complication, if 60 customers arrive by time t=3, what's the prob that the 60th arrives between 2.9 and 3?
+# So instead, it's P(2.9 < S60 < 3 | N3=60), meaning what's the prob the maximum Sn value is between 2.9 and 3
+# or so the P(M > 2.9) since it doesn't go past 3. This can then become 1 - P(each U1-U60 < 2.9) which, since they're independent, turns to 1-(P(U1 < 2.9))^60, and since it's a uniform dist, we know it's
+1-(2.9/3)^60
+
+# if we were to look for, say, the minimum, P(0 < S1 < 0.1 | N3=60), this becomes P(min < 0.1), so we want
+# 1 - (P(U1 > 0.1))^60 or 1 - (1 - P(U1<0.1))^60
+1-(1-(0.1/3))^60
+
+```
+## Incidence paradox
+Important to know, regarding the incidence paradox, the expected length of the interarrival time containing a fixed time t, E[Snt+1 - Snt+1] or E[Tt+1], is not 1/λ unless t is large, in which case it's 2/λ. The amount of time YOU expect to wait, given that your arrival is a uniform distribution, is the halfway point between the arrival of 2 buses. As such, you expect to wait half of 2/λ, so 1/λ.
+
+
+## Nonhomogenous Poisson Process
+has intensity function λ(t) and E[Nt] = integral t to 0 λ(s)ds
+Nt has independent increments, but not necessarily stationary ones, meaning the length of time is not the only factor and different "hours" can affect the rate
+
+```{r}
+#EX: Students arrive at caf in nonhomog pois process, from 11:00 to 4:00, following the rate of 100 + 100t while
+# 0<t<1, a stable 200 between 1<t<3 and then decreases linearly to 100 from 3 to 2, so 500-100t from 3<t<4
+# what is prob that at least 400 people arrive between 11:30 and 1:30? so we want P(N2.5 - N0.5 >= 400)
+# so then 1 - P(N2.5 - N0.5 < 399), and we know the mean of N2.5 - N0.5 is the integral from 2.5 to 0.5
+# of the corresponding functions for each hour. If we can get the mean, we can get a stable λ, and use that in
+# ppois(), so we do integral from 1 to 0.5 with the appropriate function + integral from 2.5 to 1 witht the
+# appropriate function. This gets us a mean/λ of 387.5
+1 - ppois(399, 387.5)
+
+
+
+```
+
+## Compound Poisson Process
+Xt is a compound stochastic process if it can be represented as the sum of Yn, an independent random variable, up to Nt, a poisson process.
+Bear in mind, E[Xt] = λtE[Y1] and Var[Xt] = λtE[Y1^2] = λt(Var[Y1] + E[Y1]^2)
+
+As an example, consider a case where passengers arrive in buses to an event. If the buses arrive as a Poisson process, and the amount of passengers in each bus is an iid, say, a normal distribution, then your compound Poisson process could be the number of passengers that have arrived by time t, Xt. In fact, thats our example here.
+
+```{r}
+#EX: buses arrive as pois w rate 5 bus/hr, num of fans in bus is iid w/ mean 20 and sd 10
+# Xt is num of fans per time t, whats the dist of process Xt, its a compound proc
+# whats the mean and variance of Xt?
+5 * t * 20 # E[Xt] = λtE[Y1], t isn't declared
+5 * t * (10^2 * 20^2) # Var[Xt] = λtE[Y1^2] = λt(Var[Y1] + E[Y1]^2)
+
+```
+
+
+## Conditional Poisson Process
+Has stationary increments, a process such that with a positive rv L, conditional on L = λ, the counting process is pois proc with rate λ
+In this case:
+E[Nt] = E[E[Nt | L]] = E[Lt] = tE[L] and
+Var[Nt] = tE[L] + t2Var[L]
+
+```{r}
+#EX: number of WA messages received follows a conditional Poisson proc with a random rate L,
+# where E[L] = 10 and Var[L] = 25. Find E[Nt] and Var[Nt] for t=8, a span of 8 hours
+8*10 # E[Nt] = tE[L]; E[N8] = 8E[L]
+5 * t * (10^2 * 20^2) # Var[Xt] = λtE[Y1^2] = λt(Var[Y1] + E[Y1]^2)
+8 * 10 + (8^2) * 25 # Var[Nt] = 8E[L] + (8^2)*Var[L]
+
+```
+
+
+
+
+
+
+
+
+
