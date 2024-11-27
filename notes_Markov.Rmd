@@ -1,0 +1,59 @@
+---
+title: "Stochastic Notes"
+author: "SQ"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r, include = FALSE}
+library(tidyverse)
+library(dplyr)
+library(knitr)
+source("utilities.R")
+
+```
+for the weather probability things
+
+p(2) = αP2 = (0.5, 0.5, 0)
+
+
+0.2 0.6 0.2
+0.1 0.8 0.1
+0.1 0.6 0.3
+
+
+^2
+
+
+
+```{r}
+mat <- matrix(c(0.2, 0.6, 0.2,0.1, 0.8, 0.1,0.1, 0.6, 0.3),nrow=3, byrow=T) # REMEMBER TO ^2 IT!!!!!
+mat
+alph = c(0.5,0.5,0)
+alph%*%(mat%*%mat)
+
+m2 = matrixpower(mat,2)
+alph%*%m2
+```
+```{r}
+mat <- matrix(c(0.0, 0.5, 0.5,0.0, 0.5, 0.0,0.5, 0.0, 0.4,0.0,0.0,0.6,0.0,0.2,0.6,0.2),nrow=4, byrow=T) # REMEMBER TO ^2 IT!!!!!
+mat
+alph = c(0.5,0.5,0)
+alph%*%(mat%*%mat)
+
+m2 = matrixpower(mat,2)
+alph%*%m2
+```
+
+
+
+
+
+
+
+
