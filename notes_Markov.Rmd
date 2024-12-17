@@ -11,9 +11,6 @@ knitr::opts_chunk$set(echo = TRUE)
 
 
 ```{r, include = FALSE}
-library(tidyverse)
-library(dplyr)
-library(knitr)
 source("utilities.R")
 
 ```
@@ -41,19 +38,75 @@ m2 = matrixpower(mat,2)
 alph%*%m2
 ```
 ```{r}
-mat <- matrix(c(0.0, 0.5, 0.5,0.0, 0.5, 0.0,0.5, 0.0, 0.4,0.0,0.0,0.6,0.0,0.2,0.6,0.2),nrow=4, byrow=T) # REMEMBER TO ^2 IT!!!!!
-mat
-alph = c(0.5,0.5,0)
-alph%*%(mat%*%mat)
+mt <- matrix(c(0.0, 0.5, 0.5,0.0, 0.5, 0.0,0.5, 0.0, 0.4,0.0,0.0,0.6,0.0,0.2,0.6,0.2),nrow=4, byrow=T) # REMEMBER TO ^2 IT!!!!!
+mt
+al = c(0.25,0.25,0.25, 0.25)
+al%*%(mt%*%mt%*%mt%*%mt%*%mt)
 
-m2 = matrixpower(mat,2)
-alph%*%m2
 ```
 
+## Limiting distributions
+As the number of time states (n) in a Markov process grows, the probabilities in the matrix converge to what's called a limiting distribution, π, which generally looks like the alpha matrices, a row of probabilities for each state.
+As an example of this, let's look at getting the limiting distribution of someone's gym routine process
+
+```{r}
+# for aerobics, massage, weights and yoga, the matrix is
+gym <- matrix(c(0.1, 0.2, 0.4, 0.3,
+                0.4, 0.0, 0.4, 0.2,
+                0.3, 0.3, 0.0, 0.4,
+                0.2, 0.1, 0.4, 0.2
+                ),nrow=4, byrow=T)
+gym
+matrixpower(gym, 24) #not producing same result?????
+
+# here's how we do it with a simulation
+init = c(1/4,1/4,1/4,1/4)
+states = c("a","m","w","y")
+n = 10^6 #num of simulation steps
+simlist = markov(init,gym,n,states)
+table(simlist)/(n+1) #it's literally different, why is it different? It's also changing every time??
+
+
+```
+
+## Stationary distributions
+All probability distributions are stationary, these are extreme cases
+if π is a limiting distribution for a markov chain, then it's a stationary distribution for it
+The converse is not true though! a tationary distribution is not necessarily the corresponding limiting distribution.
+
+A matrix is regular if for some n in P^(n), it's greater than 0(?), and it's limiting distribution is a positive limiting distribution π>0 which is also it's unique stationary distribution
+
+You can tell if a matrix is NOT regular if all the 0s in P^n and P^n+1 appear in all the same places, since it means they'll appear in the same places for all bigger powers, so the matrix isn't regular, as it's components arent all >0
 
 
 
+```{r}
+# EX: This is how we get the stationary distribution for a markov process, in this case for weather states
+weather <- matrix(c(0.2, 0.6, 0.2,0.1, 0.8, 0.1,0.1, 0.6, 0.3),nrow=3, byrow=T)
+# weather
+stationary(weather) #this is how we get the stationary dist!
+stationary(weather)%*%weather #this is to check if it's indeed a stationary distribution, ORDER OF MULT MATTERS
+#up to slide 18
 
+```
+
+```{r}
+#can get the stationary distribution from eigenvectors of a matrix too!
+eigen(weather)$values
+eigen(t(weather))$vectors
+
+x = eigen(t(weather))$vectors[,1]
+x/sum(x)
+
+```
+
+## Communication classes
+basically, sets of nodes in a markov chain. The way I see it, each class or node is defined by whether you can get to each of its members from any of its other members. Any member for which this is not true, is not in that group.
+
+Irreducible if it has only 1 communication class
+
+
+DISTINGUISH BETWEEN LIMITING AND STATIONARY DISTRIBUTION!!
 
 
 
