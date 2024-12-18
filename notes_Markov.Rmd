@@ -1,6 +1,6 @@
 ---
 title: "Stochastic Notes"
-author: "SQ"
+author: "KT"
 date: "`r Sys.Date()`"
 output: html_document
 ---
@@ -29,7 +29,7 @@ p(2) = αP2 = (0.5, 0.5, 0)
 
 
 ```{r}
-mat <- matrix(c(0.2, 0.6, 0.2,0.1, 0.8, 0.1,0.1, 0.6, 0.3),nrow=3, byrow=T) # REMEMBER TO ^2 IT!!!!!
+mat <- matrix(c(0.2, 0.6, 0.2,0.1, 0.8, 0.1,0.1, 0.6, 0.3),nrow=3, byrow=T) # REMEMBER TO ^t IT!!!!!
 mat
 alph = c(0.5,0.5,0)
 alph%*%(mat%*%mat)
@@ -38,7 +38,7 @@ m2 = matrixpower(mat,2)
 alph%*%m2
 ```
 ```{r}
-mt <- matrix(c(0.0, 0.5, 0.5,0.0, 0.5, 0.0,0.5, 0.0, 0.4,0.0,0.0,0.6,0.0,0.2,0.6,0.2),nrow=4, byrow=T) # REMEMBER TO ^2 IT!!!!!
+mt <- matrix(c(0.0, 0.5, 0.5,0.0, 0.5, 0.0,0.5, 0.0, 0.4,0.0,0.0,0.6,0.0,0.2,0.6,0.2),nrow=4, byrow=T) # REMEMBER TO ^t IT!!!!!
 mt
 al = c(0.25,0.25,0.25, 0.25)
 al%*%(mt%*%mt%*%mt%*%mt%*%mt)
@@ -50,6 +50,7 @@ As the number of time states (n) in a Markov process grows, the probabilities in
 As an example of this, let's look at getting the limiting distribution of someone's gym routine process
 
 ```{r}
+# HAS ERRORS REVIEW BEFORE CLASS
 # for aerobics, massage, weights and yoga, the matrix is
 gym <- matrix(c(0.1, 0.2, 0.4, 0.3,
                 0.4, 0.0, 0.4, 0.2,
@@ -64,7 +65,7 @@ init = c(1/4,1/4,1/4,1/4)
 states = c("a","m","w","y")
 n = 10^6 #num of simulation steps
 simlist = markov(init,gym,n,states)
-table(simlist)/(n+1) #it's literally different, why is it different? It's also changing every time??
+table(simlist)/(n+1) #why is it different?
 
 
 ```
@@ -77,7 +78,6 @@ The converse is not true though! a tationary distribution is not necessarily the
 A matrix is regular if for some n in P^(n), it's greater than 0(?), and it's limiting distribution is a positive limiting distribution π>0 which is also it's unique stationary distribution
 
 You can tell if a matrix is NOT regular if all the 0s in P^n and P^n+1 appear in all the same places, since it means they'll appear in the same places for all bigger powers, so the matrix isn't regular, as it's components arent all >0
-
 
 
 ```{r}
@@ -100,13 +100,100 @@ x/sum(x)
 
 ```
 
+BONUS ROUND:
+DISTINGUISH BETWEEN LIMITING AND STATIONARY DISTRIBUTION!!
+
+A limiting distribution , if it exists, is ALWAYS a stationary distribution,
+but the converse is not always true
+A stationary distribution may exist, but not a limiting one
+
+```{r}
+P = matrix(c(0, 1,
+             1, 0
+                ),nrow=2, byrow=T)
+P
+matrixpower(P, 500) #always changes each +1 increase, NO LIMITING DISTRIBUTION
+matrixpower(P, 501)
+π = c(0.5,0.5)
+π%*%P #when we multiply π by our matrix P, it equals π, THAT'S what makes π a stationary distribution
+
+```
+
+If π is the limiting distribution for P, then it's ONE OF its stationary distributions, but not necessarily the
+only one
+
+
 ## Communication classes
 basically, sets of nodes in a markov chain. The way I see it, each class or node is defined by whether you can get to each of its members from any of its other members. Any member for which this is not true, is not in that group.
 
 Irreducible if it has only 1 communication class
 
 
-DISTINGUISH BETWEEN LIMITING AND STATIONARY DISTRIBUTION!!
+## Classification of states
+the probability that Tj is less than infinity given that you started at j, meaning, does it ever happen again
+a state j is recurrent if fj = 1, meaning a markov chain starting at state j will always return to j
+a state j is transient is fj is positive but less than 1, meaning there is a probability the markov chain starting in j never returns to j
+
+By extension, a state j is recurrent if the sum of all visits to j is == to infinity and not if its less than infinity
+If it's transient, this sum is 1/(1-fj)
+
+If j is transient, the probability visit n from i to j approaches 0 as n approaches infinity
+
+By extension, the states of a communication class are either all recurrent or transient and, by extension again,
+for a finite irreducible markov chain, all states are recurrent
+
+## Limit theorem for irreducible markov chains
+Given a finite irreducible Markov chain, for each state j, μj is the expectation of Tj given X0 =j, meaning
+the expected return time, Tj, given you started at j
+So then, πj = 1/μj for all j and where πj is your stationary distribution, remember
+
+```{r}
+# EX: slide 36, earthquakes stationary dist
+quake <- matrix(c(0.785, 0.194, 0.018, 0.003,
+                0.615, 0.334, 0.048, 0.003,
+                0.578, 0.353, 0.069, 0.0,
+                0.909, 0.0, 0.091, 0.0
+                ),nrow=4, byrow=T)
+quake
+matrixpower(quake, 500)
+
+# we're now asked for the expected time between 2 M5 (col 4) earthquakes
+# so we take the prior equation, πj = 1/μj, turn it to μj = 1/πj and plug it right in to get the expected return time!
+# 1/0.003 he uses this, but its quite a bit off
+1/0.002911895 # but our t unit is 1/3rd years, so
+(1/0.002911895) * (1/3) # about 114 years, altho it says 111 in his slides
+
+```
+
+## Periodicity
+A finite irreducible M chain might have a unique positive stationary distribution, but might not
+have a limiting dist, although the partial averages still converge
+
+The period of a state i, denoted as d(i), is the greatest common divisor of all the return times of i
+if d(i) = 1, meaning all the return times are unique from each other and have no common denominators, we
+say the state i is aperiodic. If there are no return times, then d(i) is infinity.
+
+The states of a communication class all have the same period
+
+A markov chain is periodic if it's irreducible and all states have a period greater than 1
+it's aperiodic if irreducible and all states have period == to 1
+
+Example: Period of each state is 2, since times are 2, 4, 6, etc.
+chain is periodic with period 2
+
+other ex, periodic with period 3, given 3,6,9 return times
+
+
+## Ergodic Markov chains
+A chain that is irreducible, aperiodic and all states have finite expected return times
+These chains have a unique, positive, stationary distribution π which is its limiting distribution.
+
+idk what else to put here, i hope he doesnt ask anything :/
+
+
+
+
+
 
 
 
